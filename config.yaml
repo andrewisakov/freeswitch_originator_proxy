@@ -1,0 +1,25 @@
+redis:
+    host: '192.168.222.90'
+    channels: 
+        - CALLBACK:ORIGINATE:START
+
+dsn:
+    user: postgres
+    postgres: postgres
+    host: 192.168.222.179
+    database: 50eb8a3c0e444176ea5139ad5de941cd79daa8b9
+    minsize: 1
+    maxsize: 50
+
+phone:
+    short: 6
+    code: 8362
+
+freeswitch:
+    path: /etc/freeswitch
+    distributors: autoload_configs/distributor.conf.xml
+    esl:
+        - '192.168.222.20'
+        - 8021
+        - 'ClueCon'
+       
