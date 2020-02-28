@@ -1,3 +1,4 @@
+#!/usr/bin/python2
 # -*- coding: utf-8 -*-
 import redis
 import time
@@ -7,7 +8,11 @@ import json
 import ESL
 from psycopg2.pool import ThreadedConnectionPool
 from repoze.lru import lru_cache
-from config import PHONE, DSN, REDIS, DISTRIBUTORS, CHANNELS, ESL_DSN, LOGGER
+from config import (
+    PHONE, DSN, REDIS, DISTRIBUTORS,
+    CHANNELS, ESL_DSN, LOGGER,
+    TIMEOUT_DELIVERED, ORIGINATE_TIMEOUT,
+)
 
 
 @lru_cache(maxsize=100)
@@ -52,9 +57,10 @@ def channel(data, red, pg_pool):
         LOGGER.warning('Distributor for %s not found!', phone)
         return
 
-    LOGGER.debug('%s: %s', distributor, phone)
     data['distributor'] = distributor
-    DISTRIBUTORS.get(distributor).acquire()
+    LOGGER.debug('%s: %s', distributor, phone)
+
+    DISTRIBUTORS.get(distributor).acquire()  # Захват дистрибьютора
 
     esl = ESL.ESLconnection(*ESL_DSN)
     red.publish('CALLBACK:ORIGINATE:ACCEPTED', json.dumps(data))
@@ -65,27 +71,29 @@ def channel(data, red, pg_pool):
         uuid = esl.api('create_uuid').getBody()
         data[u'uuid'] = uuid
         red.publish('CALLBACK:ORIGINATE:STARTED', json.dumps(data))
-        red_db.set(uuid, data['message'])
-        originate_data = "{origination_uuid=%s,originate_timeout=%s,ignore_early_media=true}sofia/gateway/${distributor(%s)}/%s 6500" % (
-            uuid, 20, distributor, phone)
+        red_db.set(uuid, json.dumps(data['message']))
+        red_db.expire(uuid, 800)
+        originate_data = "{origination_uuid=%s,originate_timeout=%s,ignore_early_media=true}sofia/gateway/${distributor(%s)}/%s 6550" % (
+            uuid, ORIGINATE_TIMEOUT, distributor, phone)
         resp = esl.api('expand originate', originate_data.encode('UTF-8'))
         data['result'] = json.loads(resp.serialize('json'))['_body']
         code, _data = data['result'].split(' ')
+        data = json.dumps(data)
         if code == '+OK':
-            red.publish('CALLBACK:ORIGINATE:DELIVERED', json.dumps(data))
-            time.sleep(15)
+            red.publish('CALLBACK:ORIGINATE:DELIVERED', data)
+            time.sleep(TIMEOUT_DELIVERED)
         elif code == '-ERR':
             red.publish('CALLBACK:ORIGINATE:%s' %
-                        _data.upper(), json.dumps(data))
+                        _data.upper(), )
+            LOGGER.error('{}: {}'.format(code, data))
         else:
-            red.publish('CALLBACK:ORIGINATE:UNKNOWN_ERROR',
-                        json.dumps(data))
+            red.publish('CALLBACK:ORIGINATE:UNKNOWN_ERROR', data)
         esl.disconnect()
         red_db.delete(uuid)
         red_db.close()
     else:
         LOGGER.error('Esl %s not connected!', ESL_DSN[0])
-    DISTRIBUTORS.get(distributor).release()
+    DISTRIBUTORS.get(distributor).release()  # Освобождение дистрибютора
 
 
 def main():
@@ -105,6 +113,9 @@ def main():
 
 
 if __name__ == '__main__':
-    m = threading.Thread(target=main)
-    m.start()
-    m.join()
+    try:
+        m = threading.Thread(target=main)
+        m.start()
+        m.join()
+    except KeyboardInterrupt as e:
+        exit(0)

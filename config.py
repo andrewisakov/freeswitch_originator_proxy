@@ -26,7 +26,8 @@ DISTRIBUTORS = {d[u'@name']: BoundedSemaphore(
 
 ESL_DSN = FREESWITCH.get('esl')
 PHONE = CONFIG.get('phone', {})
-
+TIMEOUT_DELIVERED = FREESWITCH.get('timeout_delivered', 15)
+ORIGINATE_TIMEOUT = FREESWITCH.get('originate_timeout', 20)
 LOGGER = _logger.rotating_log(
     os.path.join(
         SERVICE_ROOT_DIR, 'logs/order_tracker.log',

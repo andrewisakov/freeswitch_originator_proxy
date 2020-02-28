@@ -18,6 +18,8 @@ phone:
 freeswitch:
     path: /etc/freeswitch
     distributors: autoload_configs/distributor.conf.xml
+    timeout_delivered: 15
+    originate_timeout: 20
     esl:
         - '192.168.222.20'
         - 8021
