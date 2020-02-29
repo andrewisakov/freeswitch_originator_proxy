@@ -5,7 +5,7 @@ import time
 import thread
 import threading
 import json
-import ESL
+import ESL  # Поэтому 2.7
 from psycopg2.pool import ThreadedConnectionPool
 from repoze.lru import lru_cache
 from config import (
@@ -21,6 +21,7 @@ def get_distributor(pg_pool, phone):
         code = PHONE.get('code', '')
         phone = '{}{}'.format(code, phone)
     if len(phone) != 10:
+        LOGGER.warning('Incorrect phone number {}!'.format(phone))
         return
     distributor = None
     with pg_pool.getconn() as pgcon:
@@ -42,6 +43,7 @@ def get_distributor(pg_pool, phone):
             try:
                 distributor, cut_code, distributor_id = c.fetchone()
             except Exception as e:
+                LOGGER.error('{}'.format(str(e)))
                 distributor, cut_code, distributor_id = 'inter_city', None, 0
 
     return distributor
@@ -71,25 +73,28 @@ def channel(data, red, pg_pool):
         uuid = esl.api('create_uuid').getBody()
         data[u'uuid'] = uuid
         red.publish('CALLBACK:ORIGINATE:STARTED', json.dumps(data))
-        red_db.set(uuid, json.dumps(data['message']))
+        red_db.set(uuid, json.dumps(data))
         red_db.expire(uuid, 800)
         originate_data = "{origination_uuid=%s,originate_timeout=%s,ignore_early_media=true}sofia/gateway/${distributor(%s)}/%s 6550" % (
             uuid, ORIGINATE_TIMEOUT, distributor, phone)
         resp = esl.api('expand originate', originate_data.encode('UTF-8'))
         data['result'] = json.loads(resp.serialize('json'))['_body']
+
         code, _data = data['result'].split(' ')
         data = json.dumps(data)
         if code == '+OK':
-            red.publish('CALLBACK:ORIGINATE:DELIVERED', data)
+            event = 'CALLBACK:ORIGINATE:DELIVERED'
+            LOGGER.info('{}: {}'.format(code, data))
             time.sleep(TIMEOUT_DELIVERED)
         elif code == '-ERR':
-            red.publish('CALLBACK:ORIGINATE:%s' %
-                        _data.upper(), )
-            LOGGER.error('{}: {}'.format(code, data))
+            event = 'CALLBACK:ORIGINATE:%s' % _data.upper()
+            LOGGER.warning('{}: {}'.format(code, data))
         else:
-            red.publish('CALLBACK:ORIGINATE:UNKNOWN_ERROR', data)
+            event = 'CALLBACK:ORIGINATE:UNKNOWN_ERROR'
+            LOGGER.error('{}: {}'.format(code, data))
+        red.publish(event, data)
+
         esl.disconnect()
-        red_db.delete(uuid)
         red_db.close()
     else:
         LOGGER.error('Esl %s not connected!', ESL_DSN[0])

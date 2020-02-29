@@ -5,7 +5,7 @@ redis:
 
 dsn:
     user: postgres
-    postgres: postgres
+    password: postgres
     host: 192.168.222.179
     database: 50eb8a3c0e444176ea5139ad5de941cd79daa8b9
     minsize: 1

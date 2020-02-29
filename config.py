@@ -30,5 +30,5 @@ TIMEOUT_DELIVERED = FREESWITCH.get('timeout_delivered', 15)
 ORIGINATE_TIMEOUT = FREESWITCH.get('originate_timeout', 20)
 LOGGER = _logger.rotating_log(
     os.path.join(
-        SERVICE_ROOT_DIR, 'logs/order_tracker.log',
-    ), 'order_tracker')
+        SERVICE_ROOT_DIR, 'logs/originator.log',
+    ), 'originator')
