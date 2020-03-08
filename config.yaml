@@ -1,6 +1,6 @@
 redis:
-    host: '192.168.222.90'
-    channels: 
+    host: 192.168.222.21
+    channels:
         - CALLBACK:ORIGINATE:START
 
 dsn:
@@ -21,7 +21,6 @@ freeswitch:
     timeout_delivered: 15
     originate_timeout: 20
     esl:
-        - '192.168.222.20'
+        - "192.168.222.20"
         - 8021
-        - 'ClueCon'
-       
+        - "ClueCon"

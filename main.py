@@ -7,7 +7,7 @@ import threading
 import json
 import ESL  # Поэтому 2.7
 from psycopg2.pool import ThreadedConnectionPool
-from repoze.lru import lru_cache
+from cached_property import cached_property_with_ttl
 from config import (
     PHONE, DSN, REDIS, DISTRIBUTORS,
     CHANNELS, ESL_DSN, LOGGER,
@@ -15,7 +15,7 @@ from config import (
 )
 
 
-@lru_cache(maxsize=100)
+@cached_property_with_ttl(ttl=300)
 def get_distributor(pg_pool, phone):
     if len(phone) == PHONE.get('short'):
         code = PHONE.get('code', '')
@@ -103,11 +103,12 @@ def channel(data, red, pg_pool):
 
 def main():
     LOGGER.info('Starting main thread.')
+    LOGGER.debug('Registered distributors: %s', str({k: v._initial_value for k, v in DISTRIBUTORS.items()}))
     pg_pool = ThreadedConnectionPool(*DSN)
     pool = redis.ConnectionPool(host=REDIS)
     r = redis.Redis(connection_pool=pool)
     rs = r.pubsub()
-    rs.subscribe(CHANNELS)
+    rs.subscribe(*CHANNELS)
     LOGGER.debug('Listening redis channels %s', CHANNELS)
     for event in rs.listen():
         LOGGER.debug('Received %s', event)
