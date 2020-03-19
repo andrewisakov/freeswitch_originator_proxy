@@ -15,7 +15,7 @@ from config import (
 )
 
 
-@cached_property_with_ttl(ttl=300)
+# @cached_property_with_ttl(ttl=300)
 def get_distributor(pg_pool, phone):
     if len(phone) == PHONE.get('short'):
         code = PHONE.get('code', '')
@@ -52,7 +52,10 @@ def get_distributor(pg_pool, phone):
 def channel(data, red, pg_pool):
     data = json.loads(data[u'data'])
     LOGGER.debug('Start channel %s', data)
-    phone = data.get('phones', [])[0]
+    phone = data.get('phones', [])
+    if not phone:
+        return
+    phone = phone[0]
     distributor = get_distributor(pg_pool, phone)
     if not distributor:
         red.publish('CALLBACK:ORIGINATE:NO_DISTRIBUTOR', json.dumps(data))
@@ -73,7 +76,7 @@ def channel(data, red, pg_pool):
         uuid = esl.api('create_uuid').getBody()
         data[u'uuid'] = uuid
         red.publish('CALLBACK:ORIGINATE:STARTED', json.dumps(data))
-        red_db.set(uuid, json.dumps(data))
+        red_db.set(uuid, json.dumps(data['message']))
         red_db.expire(uuid, 800)
         originate_data = "{origination_uuid=%s,originate_timeout=%s,ignore_early_media=true}sofia/gateway/${distributor(%s)}/%s 6550" % (
             uuid, ORIGINATE_TIMEOUT, distributor, phone)
@@ -88,7 +91,7 @@ def channel(data, red, pg_pool):
             time.sleep(TIMEOUT_DELIVERED)
         elif code == '-ERR':
             event = 'CALLBACK:ORIGINATE:%s' % _data.upper()
-            LOGGER.warning('{}: {}'.format(code, data))
+            LOGGER.error('{}: {}'.format(code, data))
         else:
             event = 'CALLBACK:ORIGINATE:UNKNOWN_ERROR'
             LOGGER.error('{}: {}'.format(code, data))

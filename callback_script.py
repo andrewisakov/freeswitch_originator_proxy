@@ -6,7 +6,7 @@ import freeswitch as fs
 
 
 LOG = fs.consoleLog
-REDIS = '192.168.222.90'
+REDIS = '192.168.222.21'
 
 
 def get_variables(session, variables):
@@ -33,6 +33,7 @@ def input_callback(session, what, obj, args=''):
 def get_callback_data(uuid):
     red_db = redis.Redis(REDIS, db=1)
     data = red_db.get(uuid)
+    LOG("debug", "get_callback_data: %s\n" % data)
     data = json.loads(data)
     return data
 
@@ -67,12 +68,12 @@ def handler(session, args):
     callback_data = get_callback_data(uuid)
 
     if 'choice' not in callback_data:
-        playback(session, callback_data['message'])
+        playback(session, callback_data)
     else:
         choices = callback_data['choice']
         tries = callback_data.get('tries', 3)
         timeout = callback_data.get('timeout', 5000)
-        p = callback_data['message'][0]
+        p = callback_data[0]
         digits = session.playAndGetDigits(
             1, 1, tries, timeout, "", p.encode('UTF-8'), "", "\\d{1}")
 
