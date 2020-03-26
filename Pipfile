@@ -9,6 +9,7 @@ psycopg2-binary = "*"
 cached-property = "*"
 pyyaml = "*"
 xmltodict = "*"
+freeswitch-esl-python = "*"
 
 [dev-packages]
 

@@ -1,0 +1,13 @@
+version: "3.3"
+services:
+  freeswitch_proxy:
+    build:
+      context: ./
+      dockerfile: ./dockerfile
+    volumes:
+      - /var/log:/freeswitch_proxy/logs
+      - /etc/freeswitch:/etc/freeswitch
+    container_name: freeswitch_proxy
+    hostname: freeswitch_proxy
+    command: >
+      pipenv run python main.py
