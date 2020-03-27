@@ -11,10 +11,11 @@
 ## СБОРКА
 - cd taximaster
 - docker-compose build
+- sudo cp callback_script.py /usr/share/freeswitch/scripts.py
 
 ## ЗАПУСК
 - docker-compose up -d  (запуск)
-- docker-compose logs (посмотреть не упало ли что и последние строки логов)
+- docker-compose logs (посмотреть не упало ли что)
 
 ## ОСТАНОВ
 - docker-compose down

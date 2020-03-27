@@ -72,30 +72,35 @@ def channel(data, red, pg_pool):
 
     if esl.connected:
         red_db = redis.Redis(REDIS, db=1)
-        phone = '+7{}'.format(phone)
-        uuid = esl.api('create_uuid').getBody()
-        data[u'uuid'] = uuid
-        red.publish('CALLBACK:ORIGINATE:STARTED', json.dumps(data))
-        red_db.set(uuid, json.dumps(data['message']))
-        red_db.expire(uuid, 800)
-        originate_data = "{origination_uuid=%s,originate_timeout=%s,ignore_early_media=true}sofia/gateway/${distributor(%s)}/%s 6550" % (
-            uuid, ORIGINATE_TIMEOUT, distributor, phone)
-        resp = esl.api('expand originate', originate_data.encode('UTF-8'))
-        data['result'] = json.loads(resp.serialize('json'))['_body']
+        phone = '+7{}'.format(phone)       
+        try:
+            uuid = esl.api('create_uuid').getBody()
+            data[u'uuid'] = uuid
+            red.publish('CALLBACK:ORIGINATE:STARTED', json.dumps(data))
+            red_db.set(uuid, json.dumps(data['message']))
+            red_db.expire(uuid, 800)
+            originate_data = "{origination_uuid=%s,originate_timeout=%s,ignore_early_media=true}sofia/gateway/${distributor(%s)}/%s 6550" % (
+                uuid, ORIGINATE_TIMEOUT, distributor, phone)
+            resp = esl.api('expand originate', originate_data.encode('UTF-8'))
+            data['result'] = json.loads(resp.serialize('json'))['_body']
 
-        code, _data = data['result'].split(' ')
-        data = json.dumps(data)
-        if code == '+OK':
-            event = 'CALLBACK:ORIGINATE:DELIVERED'
-            LOGGER.info('{}: {}'.format(code, data))
-            time.sleep(TIMEOUT_DELIVERED)
-        elif code == '-ERR':
-            event = 'CALLBACK:ORIGINATE:%s' % _data.upper()
-            LOGGER.error('{}: {}'.format(code, data))
-        else:
-            event = 'CALLBACK:ORIGINATE:UNKNOWN_ERROR'
-            LOGGER.error('{}: {}'.format(code, data))
-        red.publish(event, data)
+            code, _data = data['result'].split(' ')
+            data = json.dumps(data)
+            if code == '+OK':
+                event = 'CALLBACK:ORIGINATE:DELIVERED'
+                LOGGER.info('{}: {}'.format(code, data))
+                time.sleep(TIMEOUT_DELIVERED)
+            elif code == '-ERR':
+                event = 'CALLBACK:ORIGINATE:%s' % _data.upper()
+                LOGGER.error('{}: {}'.format(code, data))
+            else:
+                event = 'CALLBACK:ORIGINATE:UNKNOWN_ERROR'
+                LOGGER.error('{}: {}'.format(code, data))
+            red.publish(event, data)
+
+        except Exception as e:
+            LOGGER.exception(str(e))
+            LOGGER.error('Check ACL in freeswitch acl.xml or freeswitch is started!')
 
         esl.disconnect()
         red_db.close()

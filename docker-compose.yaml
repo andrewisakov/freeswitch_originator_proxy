@@ -9,5 +9,8 @@ services:
       - /etc/freeswitch:/etc/freeswitch
     container_name: freeswitch_proxy
     hostname: freeswitch_proxy
+    restart: on-failure
+    environment:
+      - PYTHONASYNCIODEBUG=1 
     command: >
       pipenv run python main.py

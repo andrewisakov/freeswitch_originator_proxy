@@ -33,7 +33,6 @@ def input_callback(session, what, obj, args=''):
 def get_callback_data(uuid):
     red_db = redis.Redis(REDIS, db=1)
     data = red_db.get(uuid)
-    LOG("debug", "get_callback_data: %s\n" % data)
     data = json.loads(data)
     return data
 

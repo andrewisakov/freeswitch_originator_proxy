@@ -21,6 +21,6 @@ freeswitch:
     timeout_delivered: 15
     originate_timeout: 20
     esl:
-        - "192.168.222.20"
+        - "192.168.222.21"
         - 8021
         - "ClueCon"

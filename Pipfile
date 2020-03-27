@@ -12,6 +12,7 @@ xmltodict = "*"
 freeswitch-esl-python = "*"
 
 [dev-packages]
+bpython = "*"
 
 [requires]
 python_version = "2.7"
